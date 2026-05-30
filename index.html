@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-<script src="https://lf-cdn.coze.cn/obj/unpkg/coze-space/page-editor-general-web/0.1.0-alpha.274555/dist/umd/index.js"></script><script src="https://lf-cdn.coze.cn/obj/unpkg/coze-webapp/console-bridge/0.0.1-alpha.22488f/dist/index.js"></script><script src="https://lf-cdn.coze.cn/obj/unpkg/coze-webapp/history-bridge/0.0.1-alpha.9e64d9/dist/index.min.js"></script><head>
+<head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description" content="拍照识别食物热量，智能分析营养成分">
@@ -109,37 +109,10 @@
 
         <!-- API Key 配置区域 -->
         <div id="api-config" class="mb-4">
-            <button onclick="toggleApiConfig()" class="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-border hover:shadow-md transition-all">
-                <span class="flex items-center gap-2 text-sm text-gray-600">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
-                    </svg>
-                    API 配置（免费）
-                </span>
-                <svg id="config-arrow" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
-                </svg>
-            </button>
-            <div id="config-panel" class="hidden mt-2 p-4 bg-white rounded-xl border border-border">
-                <div class="space-y-3">
-                    <div class="p-3 bg-green-50 rounded-lg text-sm text-green-700">
-                        <p class="font-medium mb-1">使用智谱 GLM-4V（免费）</p>
-                        <p class="text-xs text-green-600">
-                            1. 访问 <a href="https://open.bigmodel.cn/" target="_blank" class="underline font-medium">open.bigmodel.cn</a> 注册账号<br>
-                            2. 进入「API密钥」创建 Key<br>
-                            3. 新用户赠送大量免费额度
-                        </p>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
-                        <input type="password" id="api-key" placeholder="请输入智谱 API Key" 
-                            class="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
-                    </div>
-                    <button onclick="saveApiConfig()" class="w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
-                        保存配置
-                    </button>
-                </div>
+            <div class="p-3 bg-green-50 rounded-xl border border-green-200">
+                <p class="text-sm text-green-700 text-center">
+                    ✅ 已配置 API，可直接使用
+                </p>
             </div>
         </div>
 
@@ -279,7 +252,7 @@
         <!-- 使用说明 -->
         <div class="mt-6 text-center text-xs text-gray-400">
             <p>使用智谱 GLM-4V 免费识别食物热量</p>
-            <p class="mt-1">您的 API Key 仅存储在本地浏览器中</p>
+            <p class="mt-1">拍照或上传图片即可开始</p>
         </div>
     </div>
 
@@ -288,6 +261,9 @@
         let stream = null;
         let capturedImageData = null;
         let isCameraActive = false;
+        
+        // API Key 已内置
+        const API_KEY = 'ed8dd7cdbe7342cc8c0fbda7c13778ac.ZBBvX9rlESf3r4Kr';
 
         // DOM 元素
         const video = document.getElementById('camera-preview');
@@ -300,38 +276,11 @@
         const loadingState = document.getElementById('loading-state');
         const resultContainer = document.getElementById('result-container');
         const errorMessage = document.getElementById('error-message');
-        const configPanel = document.getElementById('config-panel');
-        const configArrow = document.getElementById('config-arrow');
 
-        // 初始化 - 从本地存储加载配置
+        // 初始化
         document.addEventListener('DOMContentLoaded', () => {
-            const savedApiKey = localStorage.getItem('zhipu_api_key');
-            
-            if (savedApiKey) {
-                document.getElementById('api-key').value = savedApiKey;
-            }
+            // API Key 已内置，无需配置
         });
-
-        // 切换 API 配置面板
-        function toggleApiConfig() {
-            const isHidden = configPanel.classList.contains('hidden');
-            configPanel.classList.toggle('hidden');
-            configArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
-        }
-
-        // 保存 API 配置
-        function saveApiConfig() {
-            const apiKey = document.getElementById('api-key').value.trim();
-            
-            if (!apiKey) {
-                alert('请输入 API Key');
-                return;
-            }
-            
-            localStorage.setItem('zhipu_api_key', apiKey);
-            alert('配置已保存！现在可以开始识别食物了');
-            toggleApiConfig();
-        }
 
         // 启动摄像头
         async function startCamera() {
@@ -480,13 +429,6 @@
 
         // 分析食物
         async function analyzeFood() {
-            const apiKey = localStorage.getItem('zhipu_api_key');
-            if (!apiKey) {
-                showError('请先配置 API Key（点击上方「API 配置」）');
-                toggleApiConfig();
-                return;
-            }
-            
             if (!capturedImageData) {
                 showError('请先拍照或选择图片');
                 return;
@@ -504,7 +446,7 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${apiKey}`
+                        'Authorization': `Bearer ${API_KEY}`
                     },
                     body: JSON.stringify({
                         model: 'glm-4v-flash',
