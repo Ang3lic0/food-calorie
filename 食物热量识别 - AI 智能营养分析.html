@@ -1,0 +1,620 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<script src="https://lf-cdn.coze.cn/obj/unpkg/coze-space/page-editor-general-web/0.1.0-alpha.274555/dist/umd/index.js"></script><script src="https://lf-cdn.coze.cn/obj/unpkg/coze-webapp/console-bridge/0.0.1-alpha.22488f/dist/index.js"></script><script src="https://lf-cdn.coze.cn/obj/unpkg/coze-webapp/history-bridge/0.0.1-alpha.9e64d9/dist/index.min.js"></script><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="拍照识别食物热量，智能分析营养成分">
+    <title>食物热量识别 - AI 智能营养分析</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        primary: '#22C55E',
+                        'primary-dark': '#16A34A',
+                        text: '#1F2937',
+                        bg: '#F9FAFB',
+                        border: '#E5E7EB',
+                        accent: '#F97316',
+                        warning: '#EF4444'
+                    },
+                    fontFamily: {
+                        sans: ['-apple-system', 'BlinkMacSystemFont', 'Segoe UI', 'Roboto', 'Helvetica Neue', 'Arial', 'sans-serif']
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @keyframes pulse-ring {
+            0% { transform: scale(0.95); opacity: 1; }
+            50% { transform: scale(1.05); opacity: 0.7; }
+            100% { transform: scale(0.95); opacity: 1; }
+        }
+        .pulse-animation {
+            animation: pulse-ring 2s ease-in-out infinite;
+        }
+        
+        @keyframes slide-up {
+            from { transform: translateY(20px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .slide-up {
+            animation: slide-up 0.3s ease-out forwards;
+        }
+        
+        @keyframes skeleton-loading {
+            0% { background-position: -200% 0; }
+            100% { background-position: 200% 0; }
+        }
+        .skeleton {
+            background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+            background-size: 200% 100%;
+            animation: skeleton-loading 1.5s infinite;
+        }
+        
+        .camera-container {
+            aspect-ratio: 4/3;
+        }
+        
+        /* 隐藏原生文件上传按钮 */
+        input[type="file"] {
+            display: none;
+        }
+        
+        /* 滚动条样式 */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #c1c1c1;
+            border-radius: 3px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #a1a1a1;
+        }
+        
+        /* 基础样式 */
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        button {
+            cursor: pointer;
+        }
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body class="bg-bg min-h-screen font-sans antialiased">
+    <div id="app" class="max-w-lg mx-auto px-4 py-6">
+        <!-- 头部 Logo -->
+        <header class="text-center mb-6">
+            <div class="flex items-center justify-center gap-3 mb-2">
+                <svg class="w-10 h-10 text-primary" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+                    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+                    <path d="M9 9h.01M15 9h.01"/>
+                </svg>
+                <h1 class="text-2xl font-bold text-text">食物热量识别</h1>
+            </div>
+            <p class="text-gray-500 text-sm">拍照识别食物，智能分析营养成分</p>
+        </header>
+
+        <!-- API Key 配置区域 -->
+        <div id="api-config" class="mb-4">
+            <button onclick="toggleApiConfig()" class="w-full flex items-center justify-between p-3 bg-white rounded-xl border border-border hover:shadow-md transition-all">
+                <span class="flex items-center gap-2 text-sm text-gray-600">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    API 配置（免费）
+                </span>
+                <svg id="config-arrow" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"/>
+                </svg>
+            </button>
+            <div id="config-panel" class="hidden mt-2 p-4 bg-white rounded-xl border border-border">
+                <div class="space-y-3">
+                    <div class="p-3 bg-green-50 rounded-lg text-sm text-green-700">
+                        <p class="font-medium mb-1">使用智谱 GLM-4V（免费）</p>
+                        <p class="text-xs text-green-600">
+                            1. 访问 <a href="https://open.bigmodel.cn/" target="_blank" class="underline font-medium">open.bigmodel.cn</a> 注册账号<br>
+                            2. 进入「API密钥」创建 Key<br>
+                            3. 新用户赠送大量免费额度
+                        </p>
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">API Key</label>
+                        <input type="password" id="api-key" placeholder="请输入智谱 API Key" 
+                            class="w-full px-3 py-2 border border-border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent">
+                    </div>
+                    <button onclick="saveApiConfig()" class="w-full py-2 bg-primary text-white rounded-lg text-sm font-medium hover:bg-primary-dark transition-colors">
+                        保存配置
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 摄像头/图片预览区域 -->
+        <div class="mb-4">
+            <div class="camera-container relative bg-gray-900 rounded-2xl overflow-hidden">
+                <!-- 摄像头预览 -->
+                <video id="camera-preview" class="absolute inset-0 w-full h-full object-cover hidden" autoplay playsinline muted></video>
+                
+                <!-- 拍摄的图片预览 -->
+                <img id="captured-image" class="absolute inset-0 w-full h-full object-cover hidden" alt="拍摄的食物">
+                
+                <!-- 占位符 -->
+                <div id="placeholder" class="absolute inset-0 flex flex-col items-center justify-center text-gray-400">
+                    <svg class="w-16 h-16 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                    </svg>
+                    <p class="text-sm">点击下方按钮开始</p>
+                </div>
+                
+                <!-- 重新拍照按钮 -->
+                <button id="retake-btn" onclick="retakePhoto()" class="hidden absolute top-3 right-3 px-3 py-1.5 bg-black/50 text-white rounded-lg text-sm backdrop-blur-sm hover:bg-black/70 transition-colors">
+                    重新拍照
+                </button>
+            </div>
+        </div>
+
+        <!-- 操作按钮 -->
+        <div class="grid grid-cols-2 gap-3 mb-4">
+            <button id="camera-btn" onclick="startCamera()" class="flex items-center justify-center gap-2 py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>拍照识别</span>
+            </button>
+            
+            <label class="flex items-center justify-center gap-2 py-3 bg-white border-2 border-primary text-primary rounded-xl font-medium cursor-pointer hover:bg-primary hover:text-white transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"/>
+                </svg>
+                <span>选择图片</span>
+                <input type="file" id="file-input" accept="image/*" onchange="handleFileSelect(event)">
+            </label>
+        </div>
+
+        <!-- 拍照按钮（摄像头启动后显示） -->
+        <button id="capture-btn" onclick="capturePhoto()" class="hidden w-full py-3 bg-accent text-white rounded-xl font-medium hover:bg-orange-600 transition-all pulse-animation">
+            📷 点击拍照
+        </button>
+
+        <!-- 识别按钮 -->
+        <button id="analyze-btn" onclick="analyzeFood()" class="hidden w-full py-3 bg-primary text-white rounded-xl font-medium hover:bg-primary-dark transition-all hover:shadow-lg">
+            🔍 开始识别
+        </button>
+
+        <!-- 加载状态 -->
+        <div id="loading-state" class="hidden mb-4">
+            <div class="p-4 bg-white rounded-xl border border-border">
+                <div class="flex items-center gap-3 mb-3">
+                    <div class="w-5 h-5 border-2 border-primary border-t-transparent rounded-full animate-spin"></div>
+                    <span class="text-sm text-gray-600">正在分析食物成分...</span>
+                </div>
+                <div class="space-y-2">
+                    <div class="h-4 skeleton rounded"></div>
+                    <div class="h-4 skeleton rounded w-3/4"></div>
+                    <div class="h-4 skeleton rounded w-1/2"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 识别结果 -->
+        <div id="result-container" class="hidden mb-4 slide-up">
+            <div class="p-4 bg-white rounded-xl border border-border">
+                <!-- 食物名称和总热量 -->
+                <div class="text-center pb-4 border-b border-border mb-4">
+                    <h2 id="food-name" class="text-xl font-bold text-text mb-1"></h2>
+                    <div class="flex items-center justify-center gap-2">
+                        <span class="text-3xl font-bold text-primary tabular-nums" id="calories-value"></span>
+                        <span class="text-gray-500">千卡</span>
+                    </div>
+                </div>
+                
+                <!-- 营养成分详情 -->
+                <div class="space-y-3">
+                    <h3 class="text-sm font-semibold text-gray-700">营养成分</h3>
+                    
+                    <div class="grid grid-cols-3 gap-3">
+                        <div class="text-center p-3 bg-blue-50 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">蛋白质</div>
+                            <div class="text-lg font-semibold text-blue-600 tabular-nums" id="protein-value">--</div>
+                            <div class="text-xs text-gray-400">克</div>
+                        </div>
+                        <div class="text-center p-3 bg-yellow-50 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">碳水化合物</div>
+                            <div class="text-lg font-semibold text-yellow-600 tabular-nums" id="carbs-value">--</div>
+                            <div class="text-xs text-gray-400">克</div>
+                        </div>
+                        <div class="text-center p-3 bg-red-50 rounded-lg">
+                            <div class="text-xs text-gray-500 mb-1">脂肪</div>
+                            <div class="text-lg font-semibold text-red-500 tabular-nums" id="fat-value">--</div>
+                            <div class="text-xs text-gray-400">克</div>
+                        </div>
+                    </div>
+                    
+                    <!-- 其他信息 -->
+                    <div id="additional-info" class="pt-3 border-t border-border">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">食物详情</h3>
+                        <p id="food-description" class="text-sm text-gray-600 leading-relaxed"></p>
+                    </div>
+                    
+                    <!-- 健康建议 -->
+                    <div id="health-tips" class="pt-3 border-t border-border">
+                        <h3 class="text-sm font-semibold text-gray-700 mb-2">💡 健康小贴士</h3>
+                        <p id="tips-content" class="text-sm text-gray-600 leading-relaxed"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 错误提示 -->
+        <div id="error-message" class="hidden mb-4">
+            <div class="p-4 bg-red-50 border border-red-200 rounded-xl">
+                <div class="flex items-start gap-3">
+                    <svg class="w-5 h-5 text-warning mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"/>
+                    </svg>
+                    <div>
+                        <h3 class="text-sm font-semibold text-red-800 mb-1">识别失败</h3>
+                        <p id="error-text" class="text-sm text-red-600"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 使用说明 -->
+        <div class="mt-6 text-center text-xs text-gray-400">
+            <p>使用智谱 GLM-4V 免费识别食物热量</p>
+            <p class="mt-1">您的 API Key 仅存储在本地浏览器中</p>
+        </div>
+    </div>
+
+    <script>
+        // 状态管理
+        let stream = null;
+        let capturedImageData = null;
+        let isCameraActive = false;
+
+        // DOM 元素
+        const video = document.getElementById('camera-preview');
+        const capturedImage = document.getElementById('captured-image');
+        const placeholder = document.getElementById('placeholder');
+        const cameraBtn = document.getElementById('camera-btn');
+        const captureBtn = document.getElementById('capture-btn');
+        const analyzeBtn = document.getElementById('analyze-btn');
+        const retakeBtn = document.getElementById('retake-btn');
+        const loadingState = document.getElementById('loading-state');
+        const resultContainer = document.getElementById('result-container');
+        const errorMessage = document.getElementById('error-message');
+        const configPanel = document.getElementById('config-panel');
+        const configArrow = document.getElementById('config-arrow');
+
+        // 初始化 - 从本地存储加载配置
+        document.addEventListener('DOMContentLoaded', () => {
+            const savedApiKey = localStorage.getItem('zhipu_api_key');
+            
+            if (savedApiKey) {
+                document.getElementById('api-key').value = savedApiKey;
+            }
+        });
+
+        // 切换 API 配置面板
+        function toggleApiConfig() {
+            const isHidden = configPanel.classList.contains('hidden');
+            configPanel.classList.toggle('hidden');
+            configArrow.style.transform = isHidden ? 'rotate(180deg)' : 'rotate(0deg)';
+        }
+
+        // 保存 API 配置
+        function saveApiConfig() {
+            const apiKey = document.getElementById('api-key').value.trim();
+            
+            if (!apiKey) {
+                alert('请输入 API Key');
+                return;
+            }
+            
+            localStorage.setItem('zhipu_api_key', apiKey);
+            alert('配置已保存！现在可以开始识别食物了');
+            toggleApiConfig();
+        }
+
+        // 启动摄像头
+        async function startCamera() {
+            try {
+                // 如果摄像头已经开启，则关闭
+                if (isCameraActive) {
+                    stopCamera();
+                    return;
+                }
+                
+                // 请求摄像头权限
+                stream = await navigator.mediaDevices.getUserMedia({
+                    video: { facingMode: 'environment' },
+                    audio: false
+                });
+                
+                // 设置视频源
+                video.srcObject = stream;
+                video.onloadedmetadata = () => {
+                    video.play();
+                    isCameraActive = true;
+                    
+                    // 更新 UI
+                    video.classList.remove('hidden');
+                    capturedImage.classList.add('hidden');
+                    placeholder.classList.add('hidden');
+                    retakeBtn.classList.add('hidden');
+                    captureBtn.classList.remove('hidden');
+                    analyzeBtn.classList.add('hidden');
+                    resultContainer.classList.add('hidden');
+                    errorMessage.classList.add('hidden');
+                    
+                    cameraBtn.innerHTML = `
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"/>
+                        </svg>
+                        <span>关闭摄像头</span>
+                    `;
+                    cameraBtn.classList.remove('bg-primary', 'hover:bg-primary-dark');
+                    cameraBtn.classList.add('bg-gray-500', 'hover:bg-gray-600');
+                };
+            } catch (error) {
+                console.error('摄像头启动失败:', error);
+                showError('无法访问摄像头，请检查权限设置或尝试使用"选择图片"功能');
+            }
+        }
+
+        // 停止摄像头
+        function stopCamera() {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+                stream = null;
+            }
+            isCameraActive = false;
+            video.srcObject = null;
+            
+            // 更新 UI
+            video.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            captureBtn.classList.add('hidden');
+            
+            cameraBtn.innerHTML = `
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"/>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"/>
+                </svg>
+                <span>拍照识别</span>
+            `;
+            cameraBtn.classList.remove('bg-gray-500', 'hover:bg-gray-600');
+            cameraBtn.classList.add('bg-primary', 'hover:bg-primary-dark');
+        }
+
+        // 拍照
+        function capturePhoto() {
+            if (!video.videoWidth) {
+                showError('视频尚未准备好，请稍候再试');
+                return;
+            }
+            
+            // 创建 canvas 并截取画面
+            const canvas = document.createElement('canvas');
+            canvas.width = video.videoWidth;
+            canvas.height = video.videoHeight;
+            const ctx = canvas.getContext('2d');
+            ctx.drawImage(video, 0, 0);
+            
+            // 获取图片数据
+            capturedImageData = canvas.toDataURL('image/jpeg', 0.8);
+            
+            // 显示拍摄的图片
+            capturedImage.src = capturedImageData;
+            capturedImage.classList.remove('hidden');
+            video.classList.add('hidden');
+            
+            // 停止摄像头
+            stopCamera();
+            
+            // 更新 UI
+            retakeBtn.classList.remove('hidden');
+            captureBtn.classList.add('hidden');
+            analyzeBtn.classList.remove('hidden');
+        }
+
+        // 重新拍照
+        function retakePhoto() {
+            capturedImageData = null;
+            capturedImage.classList.add('hidden');
+            placeholder.classList.remove('hidden');
+            retakeBtn.classList.add('hidden');
+            analyzeBtn.classList.add('hidden');
+            resultContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+        }
+
+        // 处理文件选择
+        function handleFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            
+            // 验证文件类型
+            if (!file.type.startsWith('image/')) {
+                showError('请选择图片文件');
+                return;
+            }
+            
+            // 读取图片
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                capturedImageData = e.target.result;
+                capturedImage.src = capturedImageData;
+                capturedImage.classList.remove('hidden');
+                video.classList.add('hidden');
+                placeholder.classList.add('hidden');
+                retakeBtn.classList.remove('hidden');
+                analyzeBtn.classList.remove('hidden');
+                resultContainer.classList.add('hidden');
+                errorMessage.classList.add('hidden');
+                
+                // 如果摄像头开着，关闭它
+                if (isCameraActive) {
+                    stopCamera();
+                }
+            };
+            reader.readAsDataURL(file);
+        }
+
+        // 分析食物
+        async function analyzeFood() {
+            const apiKey = localStorage.getItem('zhipu_api_key');
+            if (!apiKey) {
+                showError('请先配置 API Key（点击上方「API 配置」）');
+                toggleApiConfig();
+                return;
+            }
+            
+            if (!capturedImageData) {
+                showError('请先拍照或选择图片');
+                return;
+            }
+            
+            // 显示加载状态
+            loadingState.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            analyzeBtn.disabled = true;
+            
+            try {
+                // 智谱 GLM-4V API（免费）
+                const response = await fetch('https://open.bigmodel.cn/api/paas/v4/chat/completions', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${apiKey}`
+                    },
+                    body: JSON.stringify({
+                        model: 'glm-4v-flash',
+                        messages: [
+                            {
+                                role: 'system',
+                                content: `你是一个专业的营养师，擅长分析食物图片并估算热量和营养成分。
+请根据图片中的食物，返回以下 JSON 格式的信息：
+{
+    "foodName": "食物名称",
+    "calories": 热量数值（数字，单位：千卡）,
+    "protein": 蛋白质含量（数字，单位：克）,
+    "carbs": 碳水化合物含量（数字，单位：克）,
+    "fat": 脂肪含量（数字，单位：克）,
+    "description": "食物的简单描述（包含份量估算）",
+    "healthTips": "针对该食物的健康建议"
+}
+
+注意：
+1. 热量和营养成分请根据图片中的份量进行合理估算
+2. 如果无法识别食物，请在 foodName 中写"未识别"，其他字段填 0 或空字符串
+3. 只返回 JSON，不要添加其他说明文字`
+                            },
+                            {
+                                role: 'user',
+                                content: [
+                                    {
+                                        type: 'text',
+                                        text: '请分析这张图片中的食物，估算热量和营养成分'
+                                    },
+                                    {
+                                        type: 'image_url',
+                                        image_url: {
+                                            url: capturedImageData
+                                        }
+                                    }
+                                ]
+                            }
+                        ],
+                        max_tokens: 1000
+                    })
+                });
+                
+                if (!response.ok) {
+                    const errorData = await response.json().catch(() => ({}));
+                    throw new Error(errorData.error?.message || `请求失败: ${response.status}`);
+                }
+                
+                const data = await response.json();
+                const content = data.choices[0]?.message?.content;
+                
+                if (!content) {
+                    throw new Error('未收到有效响应');
+                }
+                
+                // 解析 JSON
+                let result;
+                try {
+                    // 提取 JSON 内容（处理可能的 markdown 代码块）
+                    let jsonStr = content.trim();
+                    if (jsonStr.startsWith('```')) {
+                        jsonStr = jsonStr.replace(/```json?\n?/g, '').replace(/```$/g, '').trim();
+                    }
+                    result = JSON.parse(jsonStr);
+                } catch (parseError) {
+                    console.error('JSON 解析失败:', content);
+                    throw new Error('无法解析 AI 响应，请重试');
+                }
+                
+                // 显示结果
+                displayResult(result);
+                
+            } catch (error) {
+                console.error('分析失败:', error);
+                showError(error.message || '分析过程中出现错误，请重试');
+            } finally {
+                loadingState.classList.add('hidden');
+                analyzeBtn.disabled = false;
+            }
+        }
+
+        // 显示结果
+        function displayResult(result) {
+            document.getElementById('food-name').textContent = result.foodName || '未知食物';
+            document.getElementById('calories-value').textContent = result.calories || '--';
+            document.getElementById('protein-value').textContent = result.protein || '--';
+            document.getElementById('carbs-value').textContent = result.carbs || '--';
+            document.getElementById('fat-value').textContent = result.fat || '--';
+            document.getElementById('food-description').textContent = result.description || '暂无描述';
+            document.getElementById('tips-content').textContent = result.healthTips || '暂无建议';
+            
+            resultContainer.classList.remove('hidden');
+            
+            // 滚动到结果区域
+            resultContainer.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        }
+
+        // 显示错误
+        function showError(message) {
+            document.getElementById('error-text').textContent = message;
+            errorMessage.classList.remove('hidden');
+            resultContainer.classList.add('hidden');
+        }
+
+        // 页面卸载时清理
+        window.addEventListener('beforeunload', () => {
+            if (stream) {
+                stream.getTracks().forEach(track => track.stop());
+            }
+        });
+    </script>
+</body>
+</html>
